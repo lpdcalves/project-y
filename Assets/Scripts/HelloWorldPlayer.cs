@@ -1,14 +1,15 @@
 using Unity.Netcode;
 using UnityEngine;
 
-namespace HelloWorld
+namespace ProjectY
 {
     public class HelloWorldPlayer : NetworkBehaviour
     {
-        public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>(
-            readPerm: NetworkVariableReadPermission.Everyone,
-            writePerm: NetworkVariableWritePermission.Server
-            );
+        //public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>(
+        //    readPerm: NetworkVariableReadPermission.Everyone,
+        //    writePerm: NetworkVariableWritePermission.Server
+        //    );
+        public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
 
         public override void OnNetworkSpawn()
         {
@@ -40,7 +41,7 @@ namespace HelloWorld
 
         static Vector3 GetRandomPositionOnPlane()
         {
-            return new Vector3(Random.Range(-3f, 3f), 1f, Random.Range(-3f, 3f));
+            return new Vector3(Random.Range(-3f, 3f), 0f, Random.Range(-3f, 3f));
         }
 
         void Update()
