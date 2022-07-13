@@ -377,6 +377,8 @@ GameObject:
   - component: {fileID: 4962397842174569346}
   - component: {fileID: -3843437346008817403}
   - component: {fileID: -7885793613638125546}
+  - component: {fileID: -6214521328632049829}
+  - component: {fileID: 4113596707016468636}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -412,7 +414,7 @@ Animator:
   m_GameObject: {fileID: 749113560331442472}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 36078ab0369161e49a29d349ae3e0739, type: 3}
-  m_Controller: {fileID: 9100000, guid: 40db3173a05ae3242b1c182a09b0a183, type: 2}
+  m_Controller: {fileID: 9100000, guid: 2699a80000bf88c4bb015b62e561bc61, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 1
@@ -462,11 +464,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f51318f3ccdf92944ba3e25fcd12e687, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 0.01
+  speed: 3.5
+  rotationSpeed: 1
   posRange: {x: -4, y: 4}
-  forwardBackPosition:
-    m_InternalValue: 0
-  leftRightPosition:
+  playerPositionDirection:
+    m_InternalValue: {x: 0, y: 0, z: 0}
+  playerRotationDirection:
+    m_InternalValue: {x: 0, y: 0, z: 0}
+  networkPlayerState:
     m_InternalValue: 0
 --- !u!114 &-7885793613638125546
 MonoBehaviour:
@@ -486,14 +491,45 @@ MonoBehaviour:
   SyncRotAngleX: 1
   SyncRotAngleY: 1
   SyncRotAngleZ: 1
-  SyncScaleX: 1
-  SyncScaleY: 1
-  SyncScaleZ: 1
+  SyncScaleX: 0
+  SyncScaleY: 0
+  SyncScaleZ: 0
   PositionThreshold: 0.001
   RotAngleThreshold: 0.01
   ScaleThreshold: 0.01
   InLocalSpace: 0
   Interpolate: 1
+--- !u!114 &-6214521328632049829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749113560331442472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Animator: {fileID: 6327168972843538920}
+--- !u!143 &4113596707016468636
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749113560331442472}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Height: 1.8
+  m_Radius: 0.2
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!1 &853240541273359974
 GameObject:
   m_ObjectHideFlags: 0

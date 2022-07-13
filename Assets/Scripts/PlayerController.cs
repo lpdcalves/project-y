@@ -5,88 +5,126 @@ using UnityEngine;
 
 public class PlayerController : NetworkBehaviour
 {
+    public enum PlayerState
+    {
+        Idle,
+        Walk,
+        ReverseWalk
+    }
+
     [SerializeField]
-    private float walkSpeed = 3.5f;
+    private float speed = 3.5f;
+
+    [SerializeField]
+    private float rotationSpeed = 1f;
 
     [SerializeField]
     private Vector2 posRange = new Vector2(-4, 4);
 
     [SerializeField]
-    private NetworkVariable<float> forwardBackPosition = new NetworkVariable<float>();
+    private NetworkVariable<Vector3> playerPositionDirection = new NetworkVariable<Vector3>();
 
     [SerializeField]
-    private NetworkVariable<float> leftRightPosition = new NetworkVariable<float>();
+    private NetworkVariable<Vector3> playerRotationDirection = new NetworkVariable<Vector3>();
+
+    [SerializeField]
+    private NetworkVariable<PlayerState> networkPlayerState = new NetworkVariable<PlayerState>();
+
+
+    private CharacterController characterController;
+    private Animator animator;
 
     // client caching to save on updates
-    private float oldForwardBackPosition;
-    private float oldLeftRightPosition;
+    private Vector3 oldInputPosition;
+    private Vector3 oldInputRotation;
 
-    private void Start()
+    private void Awake()
     {
-        transform.position = GetRandomPositionOnPlane();
+        characterController = GetComponent<CharacterController>();
+        animator = GetComponent<Animator>();
     }
 
     private void Update()
     {
-        if (IsServer)
-        {
-            UpdateServer();
-        }
-
         if (IsClient && IsOwner)
         {
-            UpdateClient();
+            ClientInput();
+        }
+
+        ClientMoveAndRotate();
+        ClientVisuals();
+    }
+
+    private void ClientInput()
+    {
+        // Player input changes
+        Vector3 inputRotation = new Vector3(0, Input.GetAxis("Horizontal"), 0);
+        Vector3 direction = transform.TransformDirection(Vector3.forward);
+        float forwardInput = Input.GetAxis("Vertical");
+        Vector3 inputPosition = direction * forwardInput;
+
+        if (oldInputPosition != inputPosition || oldInputRotation != inputRotation)
+        {
+            oldInputPosition = inputPosition;
+            oldInputRotation = inputRotation;
+            UpdateClientPositionAndRotationServerRpc(inputPosition * speed, inputRotation * rotationSpeed);
+        }
+
+        // Player state changes
+        if(forwardInput > 0)
+        {
+            UpdatePlayerStateServerRpc(PlayerState.Walk);
+        }
+        else if(forwardInput < 0)
+        {
+            UpdatePlayerStateServerRpc(PlayerState.ReverseWalk);
+        }
+        else
+        {
+            UpdatePlayerStateServerRpc(PlayerState.Idle);
         }
     }
 
-    private void UpdateServer()
+    private void ClientMoveAndRotate()
     {
-        transform.position = new Vector3(transform.position.x + leftRightPosition.Value,
-                                        transform.position.y,
-                                        transform.position.z + forwardBackPosition.Value);
+        if(playerPositionDirection.Value != Vector3.zero)
+        {
+            characterController.SimpleMove(playerPositionDirection.Value);
+        }
+
+        if (playerRotationDirection.Value != Vector3.zero)
+        {
+            transform.Rotate(playerRotationDirection.Value);
+        }
     }
 
-    private void UpdateClient()
+    private void ClientVisuals()
     {
-        float forwardBackward = 0;
-        float leftRight = 0;
-
-        if (Input.GetKey(KeyCode.W))
+        if(networkPlayerState.Value == PlayerState.Walk)
         {
-            forwardBackward += walkSpeed;
+            animator.SetFloat("Walk", 1);
         }
-        if (Input.GetKey(KeyCode.S))
+        else if (networkPlayerState.Value == PlayerState.ReverseWalk)
         {
-            forwardBackward -= walkSpeed;
+            animator.SetFloat("Walk", -1);
         }
-        if (Input.GetKey(KeyCode.A))
+        else
         {
-            leftRight -= walkSpeed;
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            leftRight += walkSpeed;
+            animator.SetFloat("Walk", 0);
         }
 
-        if(oldForwardBackPosition != forwardBackward || oldLeftRightPosition != leftRight)
-        {
-            oldForwardBackPosition = forwardBackward;
-            oldLeftRightPosition = leftRight;
-
-            // updating client position
-            UpdateClientPositionServerRpc(forwardBackward, leftRight);
-        }
     }
 
     [ServerRpc]
-    public void UpdateClientPositionServerRpc(float forwardBackward, float leftRight)
+    public void UpdateClientPositionAndRotationServerRpc(Vector3 newPositionDirection, Vector3 newRotationDirection)
     {
-        forwardBackPosition.Value = forwardBackward;
-        leftRightPosition.Value = leftRight;
+        playerPositionDirection.Value = newPositionDirection;
+        playerRotationDirection.Value = newRotationDirection;
     }
 
-    private Vector3 GetRandomPositionOnPlane()
+    [ServerRpc]
+    public void UpdatePlayerStateServerRpc(PlayerState newState)
     {
-        return new Vector3(Random.Range(posRange.x, posRange.y), 0f, Random.Range(posRange.x, posRange.y));
+        networkPlayerState.Value = newState;
     }
 }
