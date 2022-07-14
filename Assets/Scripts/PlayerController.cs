@@ -42,6 +42,7 @@ public class PlayerController : NetworkBehaviour
     {
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        animator.fireEvents = false;
     }
 
     private void Update()
@@ -94,7 +95,7 @@ public class PlayerController : NetworkBehaviour
 
         if (playerRotationDirection.Value != Vector3.zero)
         {
-            transform.Rotate(playerRotationDirection.Value);
+            transform.Rotate(playerRotationDirection.Value * Time.deltaTime);
         }
     }
 

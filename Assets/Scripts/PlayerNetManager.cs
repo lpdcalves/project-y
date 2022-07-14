@@ -15,7 +15,7 @@ namespace ProjectY
 
         private void Update()
         {
-            if (NetworkManager.Singleton.IsServer) {
+            if (IsServer) {
                 playerCount.Value = NetworkManager.Singleton.ConnectedClientsIds.Count;
             }
             else
@@ -24,53 +24,8 @@ namespace ProjectY
             }
         }
 
-        void OnGUI()
-        {
-            GUILayout.BeginArea(new Rect(10, 10, 300, 300));
-            if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-            {
-                StartButtons();
-            }
-            else
-            {
-                StatusLabels();
-
-                SubmitNewPosition();
-            }
-
-            GUILayout.EndArea();
-        }
-
-        void StartButtons()
-        {
-            if (GUILayout.Button("Host")) NetworkManager.Singleton.StartHost();
-            if (GUILayout.Button("Client")) NetworkManager.Singleton.StartClient();
-            if (GUILayout.Button("Server")) NetworkManager.Singleton.StartServer();
-        }
-
-        void StatusLabels()
-        {
-            var mode = NetworkManager.Singleton.IsHost ?
-                "Host" : NetworkManager.Singleton.IsServer ? "Server" : "Client";
-
-            GUILayout.Label("Transport: " +
-                NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
-            GUILayout.Label("Mode: " + mode);
-            GUILayout.Label("Players: " + playerCount.Value);
-        }
-
-        static void SubmitNewPosition()
-        {
-            if (GUILayout.Button(NetworkManager.Singleton.IsServer ? "Move" : "Request Position Change"))
-            {
-                var playerObject = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
-                var player = playerObject.GetComponent<HelloWorldPlayer>();
-                player.Move();
-            }
-        }
-
-        [ServerRpc]
-        void UpdatePlayerCountOnClientServerRpc(ServerRpcParams rpcParams = default)
+        [ServerRpc(RequireOwnership = false)]
+        void UpdatePlayerCountOnClientServerRpc()
         {
             playerCount.Value = NetworkManager.Singleton.ConnectedClientsIds.Count;
         }

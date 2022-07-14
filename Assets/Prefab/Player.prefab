@@ -417,7 +417,7 @@ Animator:
   m_Controller: {fileID: 9100000, guid: 2699a80000bf88c4bb015b62e561bc61, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
-  m_ApplyRootMotion: 1
+  m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_WarningMessage: 
@@ -465,7 +465,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 3.5
-  rotationSpeed: 1
+  rotationSpeed: 200
   posRange: {x: -4, y: 4}
   playerPositionDirection:
     m_InternalValue: {x: 0, y: 0, z: 0}
