@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-namespace DilmerGames.Core.Singletons
+namespace Core.Singletons
 {
     public class NetworkSingleton<T> : NetworkBehaviour
         where T : Component

@@ -1,4 +1,5 @@
 using Core.Singletons;
+using ProjectY;
 using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -52,6 +53,7 @@ public class RelayManager : Singleton<RelayManager>
         Transport.SetRelayServerData(relayHostData.IPv4Address, relayHostData.Port, relayHostData.AllocationIDBytes, relayHostData.Key, allocation.ConnectionData);
 
         Logger.Instance.LogInfo($"Generated a join code: {relayHostData.JoinCode}");
+        UIManager.Instance.SetJoinCodeText(relayHostData.JoinCode);
 
         return relayHostData;
     }

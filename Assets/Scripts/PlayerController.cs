@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
+[RequireComponent(typeof(NetworkObject))]
 public class PlayerController : NetworkBehaviour
 {
     public enum PlayerState
@@ -16,7 +17,7 @@ public class PlayerController : NetworkBehaviour
     private float speed = 3.5f;
 
     [SerializeField]
-    private float rotationSpeed = 1f;
+    private float rotationSpeed = 200f;
 
     [SerializeField]
     private Vector2 posRange = new Vector2(-4, 4);
