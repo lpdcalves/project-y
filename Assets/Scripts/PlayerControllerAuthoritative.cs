@@ -37,10 +37,10 @@ public class PlayerControllerAuthoritative : NetworkBehaviour
 
     private void Start()
     {
-        if( IsClient && IsOwner)
-        {
-            PlayerCameraFollow.Instance.FollowPlayer(transform.Find("PlayerCameraRoot"));
-        }
+        //if( IsClient && IsOwner)
+        //{
+        //    PlayerCameraFollow.Instance.FollowPlayer(transform.Find("PlayerCameraRoot"));
+        //}
     }
 
     private void Update()

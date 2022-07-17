@@ -88,6 +88,7 @@ public class RelayManager : Singleton<RelayManager>
             relayJoinData.Key, relayJoinData.ConnectionData, relayJoinData.HostConnectionData);
 
         Logger.Instance.LogInfo($"Client joined gane with join code: {joinCode}");
+        UIManager.Instance.SetJoinCodeText(relayJoinData.JoinCode);
 
         return relayJoinData;
     }

@@ -23,6 +23,9 @@ namespace StarterAssets
         [Tooltip("Acceleration and deceleration")]
         public float SpeedChangeRate = 10.0f;
 
+        [Tooltip("Camera movement sensitivity")]
+        public float Sensitivity = 1f;
+
         public AudioClip LandingAudioClip;
         public AudioClip[] FootstepAudioClips;
         [Range(0, 1)] public float FootstepAudioVolume = 0.5f;
@@ -96,7 +99,10 @@ namespace StarterAssets
         private Animator _animator;
         private CharacterController _controller;
         private DumbInputManager _input;
+        private ThirdPersonShooterController _3pscontroller;
         private GameObject _mainCamera;
+
+        private bool _rotateOnMove = true;
 
         private const float _threshold = 0.01f;
 
@@ -122,22 +128,23 @@ namespace StarterAssets
 
         private void Start()
         {
-            if (IsClient && IsOwner)
-            {
-                PlayerCameraFollow.Instance.FollowPlayer(transform.Find("PlayerCameraRoot"));
-            }
-
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
             
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<DumbInputManager>();
+            _3pscontroller = GetComponent<ThirdPersonShooterController>();
 
             AssignAnimationIDs();
 
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
+
+            if (IsClient && IsOwner)
+            {
+                _3pscontroller.SetVirtualCameraTargets(transform.Find("PlayerCameraRoot"));
+            }
         }
 
         private void Update()
@@ -193,8 +200,8 @@ namespace StarterAssets
                 //Don't multiply mouse input by Time.deltaTime;
                 float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
 
-                _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier;
-                _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier;
+                _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier * Sensitivity;
+                _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier * Sensitivity;
             }
 
             // clamp our rotations so our values are limited 360 degrees
@@ -256,7 +263,8 @@ namespace StarterAssets
                     RotationSmoothTime);
 
                 // rotate to face input direction relative to camera position
-                transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                if(_rotateOnMove)
+                    transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
             }
 
 
@@ -382,6 +390,16 @@ namespace StarterAssets
             {
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
+        }
+
+        public void SetSensitivity(float newSensitivity)
+        {
+            Sensitivity = newSensitivity;
+        }
+
+        public void SetRotateOnMove(bool newRotateOnMove)
+        {
+            _rotateOnMove = newRotateOnMove;
         }
     }
 }

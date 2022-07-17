@@ -135,10 +135,6 @@ namespace StarterAssets
 
         private void Start()
         {
-            if (IsClient && IsOwner)
-            {
-                PlayerCameraFollow.Instance.FollowPlayer(transform.Find("PlayerCameraRoot"));
-            }
 
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
             

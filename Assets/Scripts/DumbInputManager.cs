@@ -9,6 +9,8 @@ public class DumbInputManager : MonoBehaviour
 	public Vector2 look;
 	public bool jump;
 	public bool sprint;
+	public bool aim;
+	public bool shoot;
 
 	[Header("Movement Settings")]
 	public bool analogMovement;
@@ -23,5 +25,7 @@ public class DumbInputManager : MonoBehaviour
 		look = new Vector2(Input.GetAxis("Mouse X"), -1 * Input.GetAxis("Mouse Y"));
 		jump = Input.GetKeyDown(KeyCode.Space);
 		sprint = Input.GetKey(KeyCode.LeftShift);
+		aim = Input.GetMouseButton(1); // Right click
+		shoot = Input.GetMouseButtonDown(0); // Left click
 	}
 }
