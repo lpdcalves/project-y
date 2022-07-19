@@ -11,12 +11,15 @@ public class DumbInputManager : MonoBehaviour
 	public bool sprint;
 	public bool aim;
 	public bool shoot;
+	public bool escape;
+	public bool usePistol;
+	public bool useRifle;
 
 	[Header("Movement Settings")]
 	public bool analogMovement;
 
 	[Header("Mouse Cursor Settings")]
-	public bool cursorLocked = false;
+	public bool cursorLocked = true;
 	public bool cursorInputForLook = true;
 
     private void Update()
@@ -27,5 +30,14 @@ public class DumbInputManager : MonoBehaviour
 		sprint = Input.GetKey(KeyCode.LeftShift);
 		aim = Input.GetMouseButton(1); // Right click
 		shoot = Input.GetMouseButtonDown(0); // Left click
+		escape = Input.GetKeyDown(KeyCode.Escape);
+		usePistol = Input.GetKeyDown(KeyCode.Alpha1);
+		useRifle = Input.GetKeyDown(KeyCode.Alpha2);
+	}
+
+	public void SetCursorState(bool newState)
+	{
+		Cursor.lockState = newState ? CursorLockMode.Locked : CursorLockMode.None;
+		Cursor.visible = newState;
 	}
 }

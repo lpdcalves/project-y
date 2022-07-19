@@ -52,7 +52,7 @@ public class PlayerControllerAuthoritative : NetworkBehaviour
             ClientInput();
         }
 
-        ClientVisuals();
+        //ClientVisuals();
     }
 
     private void UpdatePlayerStatus()
@@ -86,44 +86,44 @@ public class PlayerControllerAuthoritative : NetworkBehaviour
         transform.Rotate(inputRotation * rotationSpeed * Time.deltaTime, Space.World);
 
         // Player state changes
-        if (forwardInput > 0 && forwardInput <= 1)
-        {
-            UpdatePlayerAnimState(PlayerAnimState.Walk);
-        }
-        else if (forwardInput > 1)
-        {
-            UpdatePlayerAnimState(PlayerAnimState.Run);
-        }
-        else if(forwardInput < 0)
-        {
-            UpdatePlayerAnimState(PlayerAnimState.ReverseWalk);
-        }
-        else
-        {
-            UpdatePlayerAnimState(PlayerAnimState.Idle);
-        }
+        //if (forwardInput > 0 && forwardInput <= 1)
+        //{
+        //    UpdatePlayerAnimState(PlayerAnimState.Walk);
+        //}
+        //else if (forwardInput > 1)
+        //{
+        //    UpdatePlayerAnimState(PlayerAnimState.Run);
+        //}
+        //else if(forwardInput < 0)
+        //{
+        //    UpdatePlayerAnimState(PlayerAnimState.ReverseWalk);
+        //}
+        //else
+        //{
+        //    UpdatePlayerAnimState(PlayerAnimState.Idle);
+        //}
     }
 
-    private void ClientVisuals()
-    {
-        if(clientAnimationState == PlayerAnimState.Walk)
-        {
-            animator.SetFloat("Walk", 1);
-        }
-        else if (clientAnimationState == PlayerAnimState.Run)
-        {
-            animator.SetFloat("Walk", 2);
-        }
-        else if (clientAnimationState == PlayerAnimState.ReverseWalk)
-        {
-            animator.SetFloat("Walk", -1);
-        }
-        else
-        {
-            animator.SetFloat("Walk", 0);
-        }
+    //private void ClientVisuals()
+    //{
+    //    if(clientAnimationState == PlayerAnimState.Walk)
+    //    {
+    //        animator.SetFloat("Walk", 1);
+    //    }
+    //    else if (clientAnimationState == PlayerAnimState.Run)
+    //    {
+    //        animator.SetFloat("Walk", 2);
+    //    }
+    //    else if (clientAnimationState == PlayerAnimState.ReverseWalk)
+    //    {
+    //        animator.SetFloat("Walk", -1);
+    //    }
+    //    else
+    //    {
+    //        animator.SetFloat("Walk", 0);
+    //    }
 
-    }
+    //}
 
     public void UpdatePlayerAnimState(PlayerAnimState newState)
     {

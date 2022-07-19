@@ -150,9 +150,6 @@ namespace StarterAssets
         private void Update()
         {
 
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-
             _hasAnimator = TryGetComponent(out _animator);
 
             if (IsClient && IsOwner)
