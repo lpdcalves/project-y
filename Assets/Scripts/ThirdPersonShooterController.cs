@@ -6,11 +6,17 @@ using StarterAssets;
 using Unity.Netcode;
 using System;
 using UnityEngine.Animations.Rigging;
+using TMPro;
 
 public class ThirdPersonShooterController : NetworkBehaviour
 {
     private CinemachineVirtualCamera aimVirtualCamera;
     private CinemachineVirtualCamera followVirtualCamera;
+
+    [SerializeField] private HealthBar healthBar;
+
+    [SerializeField] private Transform pistolObject;
+    [SerializeField] private Transform rifleObject;
 
     [SerializeField]
     private float normalSensitivity = 1;
@@ -28,6 +34,9 @@ public class ThirdPersonShooterController : NetworkBehaviour
     public Transform spawnBulletPos;
     public Transform aimTarget;
     public Transform shoulderAimRig;
+    public Transform RHandTarget;
+    public Transform RHandRifleTarget;
+    public Transform LHandIKRig;
 
     private Network3PController _3pcontroller;
     private DumbInputManager inputs;
@@ -37,6 +46,10 @@ public class ThirdPersonShooterController : NetworkBehaviour
     [SerializeField] private NetworkVariable<PlayerStatus> playerStatus = new NetworkVariable<PlayerStatus>(
                             readPerm: NetworkVariableReadPermission.Everyone,
                             writePerm: NetworkVariableWritePermission.Owner);
+
+    [SerializeField] private NetworkVariable<float> playerHealth = new NetworkVariable<float>(
+                            readPerm: NetworkVariableReadPermission.Everyone,
+                            writePerm: NetworkVariableWritePermission.Server);
 
     [SerializeField] private float clientHealth = 100f;
     [SerializeField] PlayerAnimState clientAnimationState = PlayerAnimState.Idle;
@@ -49,6 +62,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
         _3pcontroller = GetComponent<Network3PController>();
         inputs = GetComponent<DumbInputManager>();
         animator = GetComponent<Animator>();
+        playerHealth.Value = 100;
     }
 
     private void Update()
@@ -76,7 +90,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
         }
         else
         {
-            mouseWorldPosition = ray.GetPoint(10);
+            mouseWorldPosition = ray.GetPoint(25);
         }
         aimTarget.position = mouseWorldPosition;
     }
@@ -116,6 +130,11 @@ public class ThirdPersonShooterController : NetworkBehaviour
                     {
                         if(hitTrasnform != null)
                         {
+                            if (hitTrasnform.tag == "Player")
+                            {
+                                UpdateEnemyHealthServerRpc(10, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
+                            }
+
                             var hit = Instantiate(vfxHitRed, mouseWorldPosition, Quaternion.identity);
                             hit.GetComponent<NetworkObject>().Spawn();
                         }
@@ -133,6 +152,11 @@ public class ThirdPersonShooterController : NetworkBehaviour
                     {
                         if (hitTrasnform != null)
                         {
+                            if (hitTrasnform.tag == "Player")
+                            {
+                                UpdateEnemyHealthServerRpc(10, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
+                            }
+
                             SpawnVfxHitServerRpc(mouseWorldPosition);
                         }
                     }
@@ -163,6 +187,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
         if (inputs.usePistol)
         {
             usingRifle = false;
+            
         }
 
         if (inputs.useRifle)
@@ -183,6 +208,40 @@ public class ThirdPersonShooterController : NetworkBehaviour
     {
         var hit = Instantiate(vfxHitRed, position, Quaternion.identity);
         hit.GetComponent<NetworkObject>().Spawn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void UpdateMyHealthServerRpc(float health)
+    {
+        playerHealth.Value = health;
+    }
+
+    [ServerRpc]
+    public void UpdateEnemyHealthServerRpc(float damageTaken, ulong clientId)
+    {
+        var clientToDamage = NetworkManager.Singleton.ConnectedClients[clientId]
+            .PlayerObject.GetComponent<ThirdPersonShooterController>();
+
+        if (clientToDamage.playerHealth.Value > 0)
+        {
+            clientToDamage.playerHealth.Value -= damageTaken;
+        }
+
+        // execute method on a client getting hit
+        NotifyHealthChangeClientRpc(damageTaken, new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { clientId }
+            }
+        });
+    }
+
+    [ClientRpc]
+    public void NotifyHealthChangeClientRpc(float damageTaken, ClientRpcParams clientRpcParams = default)
+    {
+
+        Logger.Instance.LogInfo($"Client got hit by {damageTaken} damage");
     }
 
     public void SetVirtualCameraTargets(Transform cameraTarget)
@@ -211,19 +270,23 @@ public class ThirdPersonShooterController : NetworkBehaviour
             playerStatus.Value = new PlayerStatus()
             {
                 animationState = clientAnimationState,
-                health = clientHealth,
                 aimTargetPos = aimTarget.position,
                 isAiming = clientIsAiming,
+                usingRifle = usingRifle,
             };
         }
         else
         {
             clientAnimationState = playerStatus.Value.animationState;
-            clientHealth = playerStatus.Value.health;
             aimTarget.position = playerStatus.Value.aimTargetPos;
             clientIsAiming = playerStatus.Value.isAiming;
+            usingRifle = playerStatus.Value.usingRifle;
         }
+
+        clientHealth = playerHealth.Value;
     }
+
+
 
     private void ClientVisuals()
     {
@@ -244,16 +307,27 @@ public class ThirdPersonShooterController : NetworkBehaviour
             animator.SetLayerWeight(2, Mathf.Lerp(animator.GetLayerWeight(2), 0f, Time.deltaTime * 10f));
         }
 
-        //if (clientAnimationState == PlayerAnimState.AimRifle)
-        //{
-        //    animator.SetLayerWeight(2, Mathf.Lerp(animator.GetLayerWeight(1), 1f, Time.deltaTime * 10f));
-        //    //animator.SetLayerWeight(1, 1f);
-        //}
-        //else
-        //{
-        //    animator.SetLayerWeight(2, Mathf.Lerp(animator.GetLayerWeight(1), 0f, Time.deltaTime * 10f));
-        //    //animator.SetLayerWeight(1, 0f);
-        //}
+
+        if (usingRifle)
+        {
+            rifleObject.gameObject.SetActive(true);
+            pistolObject.gameObject.SetActive(false);
+
+            RHandTarget.position = RHandRifleTarget.position;
+
+            LHandIKRig.GetComponent< TwoBoneIKConstraint>().weight = 1;
+
+        }
+        else
+        {
+            rifleObject.gameObject.SetActive(false);
+            pistolObject.gameObject.SetActive(true);
+
+            RHandTarget.position = RHandTarget.parent.position;
+
+            LHandIKRig.GetComponent<TwoBoneIKConstraint>().weight = 0;
+        }
+
 
         // Ligando e desligando animmation rigging
         if (clientIsAiming)
@@ -264,5 +338,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
         {
             shoulderAimRig.GetComponent<Rig>().weight = 0;
         }
+
+        healthBar.UpdateHealthBar(100, clientHealth);
     }
 }

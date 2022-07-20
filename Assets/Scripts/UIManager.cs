@@ -6,34 +6,23 @@ using UnityEngine.UI;
 
 namespace ProjectY
 {
-    public class UIManager : Singleton<UIManager>
+    public class UIManager : MonoBehaviour
     {
-        [SerializeField]
-        private Button startServerButton;
+        [SerializeField] public Transform connectUI;
+        [SerializeField] public Transform gameStatusUI;
+        [SerializeField] public Transform leaveUI;
 
-        [SerializeField]
-        private Button startHostButton;
+        [SerializeField] private Button startServerButton;
+        [SerializeField] private Button startHostButton;
+        [SerializeField] private Button startClientButton;
+        private Button leaveButton;
 
-        [SerializeField]
-        private Button startClientButton;
-
-        [SerializeField]
-        private TextMeshProUGUI playersInGameText;
-
-        [SerializeField]
-        private TMP_InputField joinCodeInput;
-
-        [SerializeField]
-        private TextMeshProUGUI joinCodeText;
+        [SerializeField] private TextMeshProUGUI playersInGameText;
+        [SerializeField] public TMP_InputField joinCodeInput;
+        [SerializeField] private TextMeshProUGUI joinCodeText;
 
         public string joinCodeFromRelayServer = "";
 
-        private bool hasServerStarted;
-
-        private void Awake()
-        {
-            Cursor.visible = true;
-        }
 
         void Update()
         {
@@ -42,52 +31,55 @@ namespace ProjectY
 
         void Start()
         {
+            connectUI.gameObject.SetActive(true);
+            gameStatusUI.gameObject.SetActive(false);
+            leaveUI.gameObject.SetActive(false);
+
+            leaveButton = leaveUI.GetComponentInChildren<Button>();
+
             // START SERVER
             startServerButton?.onClick.AddListener(() =>
             {
-                if (NetworkManager.Singleton.StartServer())
-                    Logger.Instance.LogInfo("Server started...");
-                else
-                    Logger.Instance.LogInfo("Unable to start server...");
+                MatchNetworkManager.Instance.StartServer();
             });
 
             // START HOST
             startHostButton?.onClick.AddListener(async () =>
             {
-                // this allows the UnityMultiplayer and UnityMultiplayerRelay scene to work with and without
-                // relay features - if the Unity transport is found and is relay protocol then we redirect all the 
-                // traffic through the relay, else it just uses a LAN type (UNET) communication.
-                if (RelayManager.Instance.IsRelayEnabled)
-                    await RelayManager.Instance.SetupRelay();
+                connectUI.gameObject.SetActive(false);
+                gameStatusUI.gameObject.SetActive(true);
+                leaveUI.gameObject.SetActive(true);
 
-                if (NetworkManager.Singleton.StartHost())
-                    Logger.Instance.LogInfo("Host started...");
-                else
-                    Logger.Instance.LogInfo("Unable to start host...");
+                if (!RelayManager.Instance.IsRelayEnabled)
+                {
+                    SetJoinCodeText(joinCodeInput.text);
+                }
+                await MatchNetworkManager.Instance.StartHost();
             });
 
             // START CLIENT
             startClientButton?.onClick.AddListener(async () =>
             {
-                if (RelayManager.Instance.IsRelayEnabled && !string.IsNullOrEmpty(joinCodeInput.text))
-                    await RelayManager.Instance.JoinRelay(joinCodeInput.text);
+                connectUI.gameObject.SetActive(false);
+                gameStatusUI.gameObject.SetActive(true);
+                leaveUI.gameObject.SetActive(true);
 
-                if (NetworkManager.Singleton.StartClient())
-                    Logger.Instance.LogInfo("Client started...");
-                else
-                    Logger.Instance.LogInfo("Unable to start client...");
+                if (!RelayManager.Instance.IsRelayEnabled)
+                {
+                    SetJoinCodeText(joinCodeInput.text);
+                }
+                await MatchNetworkManager.Instance.StartClient(joinCodeInput.text);
             });
 
-            // STATUS TYPE CALLBACKS
-            NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
+            // LEAVE MATCH
+            leaveButton?.onClick.AddListener(() =>
             {
-                Logger.Instance.LogInfo($"{id} just connected...");
-            };
+                connectUI.gameObject.SetActive(true);
+                gameStatusUI.gameObject.SetActive(false);
+                leaveUI.gameObject.SetActive(false);
 
-            NetworkManager.Singleton.OnServerStarted += () =>
-            {
-                hasServerStarted = true;
-            };
+                MatchNetworkManager.Instance.LeaveMatch();
+            });
         }
 
         public void SetJoinCodeText(string joinCode)

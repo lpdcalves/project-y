@@ -61,5 +61,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed84cb55e89a98a4fb4c88aa42c26df4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  UIManager: {fileID: 0}
   playerCount:
     m_InternalValue: 0
+  spawnPositions:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  matchPassword: 

@@ -61,14 +61,12 @@ public class PlayerControllerAuthoritative : NetworkBehaviour
         {
             playerStatus.Value = new PlayerStatus()
             {
-                animationState = clientAnimationState,
-                health = clientHealth
+                animationState = clientAnimationState
             };
         }
         else
         {
             clientAnimationState = playerStatus.Value.animationState;
-            clientHealth = playerStatus.Value.health;
         }
     }
 

@@ -19,13 +19,26 @@ public class DumbInputManager : MonoBehaviour
 	public bool analogMovement;
 
 	[Header("Mouse Cursor Settings")]
-	public bool cursorLocked = true;
+	public bool cursorLocked = false;
 	public bool cursorInputForLook = true;
+
+    private void Start()
+    {
+		SetCursorState(true);
+	}
+
 
     private void Update()
     {
 		move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-		look = new Vector2(Input.GetAxis("Mouse X"), -1 * Input.GetAxis("Mouse Y"));
+        if (cursorLocked)
+        {
+			look = new Vector2(Input.GetAxis("Mouse X"), -1 * Input.GetAxis("Mouse Y"));
+		}
+        else
+        {
+			look = Vector2.zero;
+		}
 		jump = Input.GetKeyDown(KeyCode.Space);
 		sprint = Input.GetKey(KeyCode.LeftShift);
 		aim = Input.GetMouseButton(1); // Right click
@@ -37,7 +50,25 @@ public class DumbInputManager : MonoBehaviour
 
 	public void SetCursorState(bool newState)
 	{
-		Cursor.lockState = newState ? CursorLockMode.Locked : CursorLockMode.None;
-		Cursor.visible = newState;
+		cursorLocked = newState;
+		if (cursorLocked)
+        {
+			Cursor.lockState = CursorLockMode.Locked;
+			Cursor.visible = false;
+		}
+        else
+        {
+			Cursor.lockState = CursorLockMode.None;
+			Cursor.visible = true;
+		}
+			
 	}
+
+    public void OnApplicationFocus(bool focus)
+    {
+        if (focus)
+        {
+			SetCursorState(true);
+        }
+    }
 }

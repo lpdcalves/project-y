@@ -53,7 +53,7 @@ public class RelayManager : Singleton<RelayManager>
         Transport.SetRelayServerData(relayHostData.IPv4Address, relayHostData.Port, relayHostData.AllocationIDBytes, relayHostData.Key, allocation.ConnectionData);
 
         Logger.Instance.LogInfo($"Generated a join code: {relayHostData.JoinCode}");
-        UIManager.Instance.SetJoinCodeText(relayHostData.JoinCode);
+        MatchNetworkManager.Instance.UIManager.SetJoinCodeText(relayHostData.JoinCode);
 
         return relayHostData;
     }
@@ -88,7 +88,7 @@ public class RelayManager : Singleton<RelayManager>
             relayJoinData.Key, relayJoinData.ConnectionData, relayJoinData.HostConnectionData);
 
         Logger.Instance.LogInfo($"Client joined gane with join code: {joinCode}");
-        UIManager.Instance.SetJoinCodeText(relayJoinData.JoinCode);
+        MatchNetworkManager.Instance.UIManager.SetJoinCodeText(relayJoinData.JoinCode);
 
         return relayJoinData;
     }
