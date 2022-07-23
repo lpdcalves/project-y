@@ -8,6 +8,7 @@ using System;
 using UnityEngine.Animations.Rigging;
 using TMPro;
 using ProjectY;
+using UnityEngine.UI;
 
 public class ThirdPersonShooterController : NetworkBehaviour
 {
@@ -16,6 +17,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
     [SerializeField] private Animator animator;
 
     [SerializeField] private HealthBar healthBar;
+    [SerializeField] private TextMeshProUGUI playerNameUI;
 
     [SerializeField] private Transform pistolObject;
     [SerializeField] private Transform rifleObject;
@@ -59,10 +61,17 @@ public class ThirdPersonShooterController : NetworkBehaviour
     [SerializeField] private bool clientIsAiming = false;
     [SerializeField] private bool usingRifle = false;
     private bool died = false;
+    private bool reloading = false;
+    private float realoadingTimer = 0;
     private float shootTimer = 0f;
+    private string playerName;
 
-    [SerializeField] AudioClip pistolSoundFX;
-    [SerializeField] AudioClip rifleSoundFX;
+    public AudioClip[] pistolShootingFX;
+    public AudioClip[] rifleShootingFX;
+    public AudioClip pistolReloadFX;
+    public AudioClip rifleReloadFX;
+
+    public float soundFXvolume = 1.0f;
 
     private WeaponStatus bigPistol = new WeaponStatus()
     {
@@ -86,8 +95,11 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
     private void Start()
     {
-        bigPistol.audioFX = pistolSoundFX;
-        subMachinegun.audioFX = rifleSoundFX;
+        bigPistol.shootingFX = pistolShootingFX;
+        bigPistol.reloadFX = pistolReloadFX;
+        subMachinegun.shootingFX = rifleShootingFX;
+        subMachinegun.reloadFX = rifleReloadFX;
+
         if (IsServer)
         {
             playerHealth.Value = 100;
@@ -109,6 +121,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
         if (IsOwner && IsClient)
         {
+            playerName = MatchNetworkManager.Instance.UIManager.playerName;
             SetVirtualCameraTargets();
             ProcessInput();
         }
@@ -167,7 +180,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
             transform.forward = Vector3.Lerp(transform.forward, aimDirection, Time.deltaTime * 20f);
 
-            if (inputs.shoot && shootTimer > (float)(1f / currentWeapon.fireRateBPS) && currentWeapon.currAmmo > 0)
+            if (inputs.shoot && shootTimer > (float)(1f / currentWeapon.fireRateBPS) && currentWeapon.currAmmo > 0 && !reloading)
             {
                 currentWeapon.currAmmo -= 1;
 
@@ -175,8 +188,12 @@ public class ThirdPersonShooterController : NetworkBehaviour
                 Vector3 aimDir = (mouseWorldPosition - spawnBulletPos.position).normalized;
                 if (IsServer)
                 {
-                    AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
-                    PlayGunSoundClientRpc();
+                    if (currentWeapon.shootingFX.Length > 0)
+                    {
+                        var index = UnityEngine.Random.Range(0, currentWeapon.shootingFX.Length);
+                        AudioSource.PlayClipAtPoint(currentWeapon.shootingFX[index], spawnBulletPos.position, soundFXvolume);
+                        PlayGunShootFXClientRpc(index);
+                    }
                     var muzzle = Instantiate(vfxMuzzleRed, spawnBulletPos.position, spawnBulletPos.rotation);
                     muzzle.GetComponent<NetworkObject>().Spawn();
 
@@ -202,8 +219,12 @@ public class ThirdPersonShooterController : NetworkBehaviour
                 }
                 else
                 {
-                    AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
-                    PlayGunSoundServerRpc();
+                    if (currentWeapon.shootingFX.Length > 0)
+                    {
+                        var index = UnityEngine.Random.Range(0, currentWeapon.shootingFX.Length);
+                        AudioSource.PlayClipAtPoint(currentWeapon.shootingFX[index], spawnBulletPos.position, soundFXvolume);
+                        PlayGunShootFXServerRpc(index);
+                    }
                     SpawnVfxMuzzleServerRpc(spawnBulletPos.position, spawnBulletPos.rotation);
 
                     // Estamos usando hitscan e estamos mirando em algo
@@ -240,7 +261,33 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
         if (inputs.reload)
         {
-            currentWeapon.currAmmo = currentWeapon.maxAmmo;
+            if (currentWeapon.shootingFX.Length > 0)
+            {
+                AudioSource.PlayClipAtPoint(currentWeapon.reloadFX, spawnBulletPos.position, soundFXvolume);
+                if (IsServer)
+                {
+                    PlayGunReloadFXClientRpc();
+                }
+                else
+                {
+                    PlayGunReloadFXServerRpc();
+                }
+            }
+            reloading = true;
+            realoadingTimer = 0;
+            StartCoroutine(WaitAndReload(currentWeapon.reloadFX.length));
+        }
+
+        if (reloading)
+        {
+            realoadingTimer += Time.deltaTime;
+            var reloadUI = MatchNetworkManager.Instance.UIManager.ReloadUI;
+            reloadUI.gameObject.SetActive(true);
+            reloadUI.GetComponent<Image>().fillAmount = realoadingTimer / currentWeapon.reloadFX.length;
+        }
+        else
+        {
+            MatchNetworkManager.Instance.UIManager.ReloadUI.gameObject.SetActive(false);
         }
 
         if (inputs.escape)
@@ -248,32 +295,57 @@ public class ThirdPersonShooterController : NetworkBehaviour
             inputs.SetCursorState(!inputs.cursorLocked);
         }
 
-        MatchNetworkManager.Instance.UIManager.currAmmo.text = currentWeapon.currAmmo.ToString();
-        MatchNetworkManager.Instance.UIManager.maxAmmo.text = currentWeapon.maxAmmo.ToString();
-
         if (inputs.usePistol)
         {
             usingRifle = false;
+            subMachinegun.currAmmo = currentWeapon.currAmmo;
             currentWeapon = bigPistol;
         }
 
         if (inputs.useRifle)
         {
             usingRifle = true;
+            bigPistol.currAmmo = currentWeapon.currAmmo;
             currentWeapon = subMachinegun;
+        }
+
+        MatchNetworkManager.Instance.UIManager.currAmmo.text = currentWeapon.currAmmo.ToString();
+        MatchNetworkManager.Instance.UIManager.maxAmmo.text = currentWeapon.maxAmmo.ToString();
+
+        if (usingRifle)
+        {
+            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 0.5f;
+            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 1f;
+        }
+        else
+        {
+            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 1f;
+            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 0.5f;
         }
     }
 
     [ServerRpc]
-    private void PlayGunSoundServerRpc()
+    private void PlayGunShootFXServerRpc(int soundidx)
     {
-        AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
+        AudioSource.PlayClipAtPoint(currentWeapon.shootingFX[soundidx], spawnBulletPos.position, soundFXvolume);
     }
 
     [ClientRpc]
-    private void PlayGunSoundClientRpc()
+    private void PlayGunShootFXClientRpc(int soundidx)
     {
-        AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
+        AudioSource.PlayClipAtPoint(currentWeapon.shootingFX[soundidx], spawnBulletPos.position, soundFXvolume);
+    }
+
+    [ServerRpc]
+    private void PlayGunReloadFXServerRpc()
+    {
+        AudioSource.PlayClipAtPoint(currentWeapon.reloadFX, spawnBulletPos.position, soundFXvolume);
+    }
+
+    [ClientRpc]
+    private void PlayGunReloadFXClientRpc()
+    {
+        AudioSource.PlayClipAtPoint(currentWeapon.reloadFX, spawnBulletPos.position, soundFXvolume);
     }
 
     [ServerRpc]
@@ -352,6 +424,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
                 aimTargetPos = aimTarget.position,
                 isAiming = clientIsAiming,
                 usingRifle = usingRifle,
+                name = playerName,
             };
         }
         else
@@ -360,6 +433,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
             aimTarget.position = playerStatus.Value.aimTargetPos;
             clientIsAiming = playerStatus.Value.isAiming;
             usingRifle = playerStatus.Value.usingRifle;
+            playerName = playerStatus.Value.name.ToString();
         }
 
         clientHealth = playerHealth.Value;
@@ -399,10 +473,6 @@ public class ThirdPersonShooterController : NetworkBehaviour
             RHandTarget.position = RHandRifleTarget.position;
 
             LHandIKRig.GetComponent< TwoBoneIKConstraint>().weight = 1;
-
-            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 0.5f;
-            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 1f;
-
         }
         else
         {
@@ -412,9 +482,6 @@ public class ThirdPersonShooterController : NetworkBehaviour
             RHandTarget.position = RHandTarget.parent.position;
 
             LHandIKRig.GetComponent<TwoBoneIKConstraint>().weight = 0;
-
-            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 1f;
-            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 0.5f;
         }
 
 
@@ -429,5 +496,13 @@ public class ThirdPersonShooterController : NetworkBehaviour
         }
 
         healthBar.UpdateHealthBar(100, clientHealth);
+        playerNameUI.text = playerName;
+    }
+
+    IEnumerator WaitAndReload(float waitFor)
+    {
+        yield return new WaitForSeconds(waitFor);
+        currentWeapon.currAmmo = currentWeapon.maxAmmo;
+        reloading = false;
     }
 }

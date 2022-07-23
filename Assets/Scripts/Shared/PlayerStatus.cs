@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -22,7 +23,8 @@ public struct WeaponStatus
     public int currAmmo;
     public FireMode fireMode;
     public int fireRateBPS;
-    public AudioClip audioFX;
+    public AudioClip[] shootingFX;
+    public AudioClip reloadFX;
 }
 
 public struct PlayerStatus : INetworkSerializable
@@ -32,6 +34,7 @@ public struct PlayerStatus : INetworkSerializable
     public Vector3 aimTargetPos;
     public bool isAiming;
     public bool usingRifle;
+    public FixedString64Bytes name;
 
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -40,5 +43,6 @@ public struct PlayerStatus : INetworkSerializable
         serializer.SerializeValue(ref aimTargetPos);
         serializer.SerializeValue(ref isAiming);
         serializer.SerializeValue(ref usingRifle);
+        serializer.SerializeValue(ref name);
     }
 }

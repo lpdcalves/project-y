@@ -1,3 +1,4 @@
+using ProjectY;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -59,11 +60,13 @@ public class DumbInputManager : MonoBehaviour
         {
 			Cursor.lockState = CursorLockMode.Locked;
 			Cursor.visible = false;
+			MatchNetworkManager.Instance.UIManager.GameVignetteUI.gameObject.SetActive(false);
 		}
         else
         {
 			Cursor.lockState = CursorLockMode.None;
 			Cursor.visible = true;
+			MatchNetworkManager.Instance.UIManager.GameVignetteUI.gameObject.SetActive(true);
 		}
 			
 	}
