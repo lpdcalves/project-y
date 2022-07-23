@@ -7,11 +7,13 @@ using Unity.Netcode;
 using System;
 using UnityEngine.Animations.Rigging;
 using TMPro;
+using ProjectY;
 
 public class ThirdPersonShooterController : NetworkBehaviour
 {
-    private CinemachineVirtualCamera aimVirtualCamera;
-    private CinemachineVirtualCamera followVirtualCamera;
+    [SerializeField] private CinemachineVirtualCamera aimVirtualCamera;
+    [SerializeField] private CinemachineVirtualCamera followVirtualCamera;
+    [SerializeField] private Animator animator;
 
     [SerializeField] private HealthBar healthBar;
 
@@ -27,9 +29,9 @@ public class ThirdPersonShooterController : NetworkBehaviour
     public bool useHitScan = false;
 
     [SerializeField] private Transform vfxHitRed;
+    [SerializeField] private Transform vfxMuzzleRed;
 
     [SerializeField] private LayerMask mouseRaycastLayermask;
-    private Animator animator;
     public Transform bulletPrefab;
     public Transform spawnBulletPos;
     public Transform aimTarget;
@@ -42,6 +44,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
     private DumbInputManager inputs;
     private Vector3 mouseWorldPosition = Vector3.zero;
     private Transform hitTrasnform = null;
+    private Transform cameraTarget = null;
 
     [SerializeField] private NetworkVariable<PlayerStatus> playerStatus = new NetworkVariable<PlayerStatus>(
                             readPerm: NetworkVariableReadPermission.Everyone,
@@ -55,14 +58,49 @@ public class ThirdPersonShooterController : NetworkBehaviour
     [SerializeField] PlayerAnimState clientAnimationState = PlayerAnimState.Idle;
     [SerializeField] private bool clientIsAiming = false;
     [SerializeField] private bool usingRifle = false;
+    private bool died = false;
+    private float shootTimer = 0f;
+
+    [SerializeField] AudioClip pistolSoundFX;
+    [SerializeField] AudioClip rifleSoundFX;
+
+    private WeaponStatus bigPistol = new WeaponStatus()
+    {
+        damage = 25,
+        maxAmmo = 9,
+        currAmmo = 9,
+        fireMode = FireMode.SemiAuto,
+        fireRateBPS = 2,
+    };
+
+    private WeaponStatus subMachinegun = new WeaponStatus()
+    {
+        damage = 5,
+        maxAmmo = 35,
+        currAmmo = 35,
+        fireMode = FireMode.FullAuto,
+        fireRateBPS = 10,
+    };
+
+    private WeaponStatus currentWeapon;
 
     private void Start()
     {
-        SetVirtualCameras();
+        bigPistol.audioFX = pistolSoundFX;
+        subMachinegun.audioFX = rifleSoundFX;
+        if (IsServer)
+        {
+            playerHealth.Value = 100;
+        }
+        //if (IsOwner && IsClient)
+        //{
+        //    UpdateMyHealthServerRpc(100);
+        //}
+        cameraTarget = transform.Find("PlayerCameraRoot");
         _3pcontroller = GetComponent<Network3PController>();
         inputs = GetComponent<DumbInputManager>();
         animator = GetComponent<Animator>();
-        playerHealth.Value = 100;
+        currentWeapon = bigPistol;
     }
 
     private void Update()
@@ -71,10 +109,17 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
         if (IsOwner && IsClient)
         {
+            SetVirtualCameraTargets();
             ProcessInput();
         }
 
         UpdatePlayerStatus();
+
+        if(clientHealth <= 0 && !died)
+        {
+            died = true;
+            MatchNetworkManager.Instance.RespawnPlayer(OwnerClientId);
+        }
         
     }
 
@@ -97,6 +142,8 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
     private void ProcessInput()
     {
+        shootTimer += Time.deltaTime;
+
         if (inputs.aim)
         {
             clientIsAiming = true;
@@ -120,11 +167,19 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
             transform.forward = Vector3.Lerp(transform.forward, aimDirection, Time.deltaTime * 20f);
 
-            if (inputs.shoot)
+            if (inputs.shoot && shootTimer > (float)(1f / currentWeapon.fireRateBPS) && currentWeapon.currAmmo > 0)
             {
+                currentWeapon.currAmmo -= 1;
+
+                shootTimer = 0;
                 Vector3 aimDir = (mouseWorldPosition - spawnBulletPos.position).normalized;
                 if (IsServer)
                 {
+                    AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
+                    PlayGunSoundClientRpc();
+                    var muzzle = Instantiate(vfxMuzzleRed, spawnBulletPos.position, spawnBulletPos.rotation);
+                    muzzle.GetComponent<NetworkObject>().Spawn();
+
                     // Estamos usando hitscan e estamos mirando em algo
                     if (useHitScan)
                     {
@@ -132,7 +187,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
                         {
                             if (hitTrasnform.tag == "Player")
                             {
-                                UpdateEnemyHealthServerRpc(10, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
+                                UpdateEnemyHealthServerRpc(currentWeapon.damage, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
                             }
 
                             var hit = Instantiate(vfxHitRed, mouseWorldPosition, Quaternion.identity);
@@ -147,6 +202,10 @@ public class ThirdPersonShooterController : NetworkBehaviour
                 }
                 else
                 {
+                    AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
+                    PlayGunSoundServerRpc();
+                    SpawnVfxMuzzleServerRpc(spawnBulletPos.position, spawnBulletPos.rotation);
+
                     // Estamos usando hitscan e estamos mirando em algo
                     if (useHitScan)
                     {
@@ -154,7 +213,7 @@ public class ThirdPersonShooterController : NetworkBehaviour
                         {
                             if (hitTrasnform.tag == "Player")
                             {
-                                UpdateEnemyHealthServerRpc(10, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
+                                UpdateEnemyHealthServerRpc(currentWeapon.damage, hitTrasnform.GetComponent<NetworkObject>().OwnerClientId);
                             }
 
                             SpawnVfxHitServerRpc(mouseWorldPosition);
@@ -179,21 +238,42 @@ public class ThirdPersonShooterController : NetworkBehaviour
             _3pcontroller.SetRotateOnMove(true);
         }
 
+        if (inputs.reload)
+        {
+            currentWeapon.currAmmo = currentWeapon.maxAmmo;
+        }
+
         if (inputs.escape)
         {
             inputs.SetCursorState(!inputs.cursorLocked);
         }
 
+        MatchNetworkManager.Instance.UIManager.currAmmo.text = currentWeapon.currAmmo.ToString();
+        MatchNetworkManager.Instance.UIManager.maxAmmo.text = currentWeapon.maxAmmo.ToString();
+
         if (inputs.usePistol)
         {
             usingRifle = false;
-            
+            currentWeapon = bigPistol;
         }
 
         if (inputs.useRifle)
         {
             usingRifle = true;
+            currentWeapon = subMachinegun;
         }
+    }
+
+    [ServerRpc]
+    private void PlayGunSoundServerRpc()
+    {
+        AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
+    }
+
+    [ClientRpc]
+    private void PlayGunSoundClientRpc()
+    {
+        AudioSource.PlayClipAtPoint(currentWeapon.audioFX, spawnBulletPos.position, 2f);
     }
 
     [ServerRpc]
@@ -208,6 +288,13 @@ public class ThirdPersonShooterController : NetworkBehaviour
     {
         var hit = Instantiate(vfxHitRed, position, Quaternion.identity);
         hit.GetComponent<NetworkObject>().Spawn();
+    }
+
+    [ServerRpc]
+    private void SpawnVfxMuzzleServerRpc(Vector3 position, Quaternion rotation)
+    {
+        var muzzle = Instantiate(vfxHitRed, position, rotation);
+        muzzle.GetComponent<NetworkObject>().Spawn();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -244,23 +331,15 @@ public class ThirdPersonShooterController : NetworkBehaviour
         Logger.Instance.LogInfo($"Client got hit by {damageTaken} damage");
     }
 
-    public void SetVirtualCameraTargets(Transform cameraTarget)
+    public void SetVirtualCameraTargets()
     {
-        SetVirtualCameras();
-        aimVirtualCamera.Follow = cameraTarget;
-        followVirtualCamera.Follow = cameraTarget;
-    }
-
-    void SetVirtualCameras()
-    {
-        if (IsOwner) 
+        if (aimVirtualCamera == null || followVirtualCamera == null)
         {
-            if (aimVirtualCamera == null)
-                aimVirtualCamera = GameObject.Find("PlayerAimCamera").GetComponent<CinemachineVirtualCamera>();
-            if (followVirtualCamera == null)
-                followVirtualCamera = GameObject.Find("PlayerFollowCamera").GetComponent<CinemachineVirtualCamera>();
+            aimVirtualCamera = MatchNetworkManager.Instance.aimVirtualCamera;
+            aimVirtualCamera.Follow = cameraTarget;
+            followVirtualCamera = MatchNetworkManager.Instance.followVirtualCamera;
+            followVirtualCamera.Follow = cameraTarget;
         }
-        
     }
 
     private void UpdatePlayerStatus()
@@ -290,7 +369,11 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
     private void ClientVisuals()
     {
-        
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+
         if (clientAnimationState == PlayerAnimState.AimPistol)
         {
             animator.SetLayerWeight(1, Mathf.Lerp(animator.GetLayerWeight(1), 1f, Time.deltaTime * 10f));
@@ -317,6 +400,9 @@ public class ThirdPersonShooterController : NetworkBehaviour
 
             LHandIKRig.GetComponent< TwoBoneIKConstraint>().weight = 1;
 
+            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 0.5f;
+            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 1f;
+
         }
         else
         {
@@ -326,6 +412,9 @@ public class ThirdPersonShooterController : NetworkBehaviour
             RHandTarget.position = RHandTarget.parent.position;
 
             LHandIKRig.GetComponent<TwoBoneIKConstraint>().weight = 0;
+
+            MatchNetworkManager.Instance.UIManager.PistolaUI.GetComponent<CanvasGroup>().alpha = 1f;
+            MatchNetworkManager.Instance.UIManager.RifleUI.GetComponent<CanvasGroup>().alpha = 0.5f;
         }
 
 

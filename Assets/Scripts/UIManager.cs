@@ -11,6 +11,10 @@ namespace ProjectY
         [SerializeField] public Transform connectUI;
         [SerializeField] public Transform gameStatusUI;
         [SerializeField] public Transform leaveUI;
+        [SerializeField] public Transform gunSelectionUI;
+        [SerializeField] public Transform gunStatusUI;
+        [SerializeField] public Transform PistolaUI;
+        [SerializeField] public Transform RifleUI;
 
         [SerializeField] private Button startServerButton;
         [SerializeField] private Button startHostButton;
@@ -20,6 +24,9 @@ namespace ProjectY
         [SerializeField] private TextMeshProUGUI playersInGameText;
         [SerializeField] public TMP_InputField joinCodeInput;
         [SerializeField] private TextMeshProUGUI joinCodeText;
+
+        public TextMeshProUGUI currAmmo;
+        public TextMeshProUGUI maxAmmo;
 
         public string joinCodeFromRelayServer = "";
 
@@ -34,6 +41,8 @@ namespace ProjectY
             connectUI.gameObject.SetActive(true);
             gameStatusUI.gameObject.SetActive(false);
             leaveUI.gameObject.SetActive(false);
+            gunSelectionUI.gameObject.SetActive(false);
+            gunStatusUI.gameObject.SetActive(false);
 
             leaveButton = leaveUI.GetComponentInChildren<Button>();
 
@@ -49,6 +58,8 @@ namespace ProjectY
                 connectUI.gameObject.SetActive(false);
                 gameStatusUI.gameObject.SetActive(true);
                 leaveUI.gameObject.SetActive(true);
+                gunSelectionUI.gameObject.SetActive(true);
+                gunStatusUI.gameObject.SetActive(true);
 
                 if (!RelayManager.Instance.IsRelayEnabled)
                 {
@@ -63,6 +74,8 @@ namespace ProjectY
                 connectUI.gameObject.SetActive(false);
                 gameStatusUI.gameObject.SetActive(true);
                 leaveUI.gameObject.SetActive(true);
+                gunSelectionUI.gameObject.SetActive(true);
+                gunStatusUI.gameObject.SetActive(true);
 
                 if (!RelayManager.Instance.IsRelayEnabled)
                 {
@@ -77,6 +90,8 @@ namespace ProjectY
                 connectUI.gameObject.SetActive(true);
                 gameStatusUI.gameObject.SetActive(false);
                 leaveUI.gameObject.SetActive(false);
+                gunSelectionUI.gameObject.SetActive(false);
+                gunStatusUI.gameObject.SetActive(false);
 
                 MatchNetworkManager.Instance.LeaveMatch();
             });

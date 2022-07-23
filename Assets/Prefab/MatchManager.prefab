@@ -73,3 +73,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   matchPassword: 
+  aimVirtualCamera: {fileID: 0}
+  followVirtualCamera: {fileID: 0}
+  playerPrefab: {fileID: 4594687961471600109, guid: 78f0a88a65d89d848ac7e991c4f16b63,
+    type: 3}

@@ -8,6 +8,23 @@ public enum PlayerAnimState
     AimRifle,
 }
 
+public enum FireMode
+{
+    SemiAuto,
+    BurstFire,
+    FullAuto,
+}
+
+public struct WeaponStatus
+{
+    public float damage;
+    public int maxAmmo;
+    public int currAmmo;
+    public FireMode fireMode;
+    public int fireRateBPS;
+    public AudioClip audioFX;
+}
+
 public struct PlayerStatus : INetworkSerializable
 {
 

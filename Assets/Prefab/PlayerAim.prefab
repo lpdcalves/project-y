@@ -3050,6 +3050,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c49822d49fb7dc940bc62e10b92d8050, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  aimVirtualCamera: {fileID: 0}
+  followVirtualCamera: {fileID: 0}
+  animator: {fileID: 0}
   healthBar: {fileID: 6330867116040176360}
   pistolObject: {fileID: 3832703583914006680}
   rifleObject: {fileID: 1132357993}
@@ -3057,6 +3060,8 @@ MonoBehaviour:
   aimSensitivity: 0.7
   useHitScan: 1
   vfxHitRed: {fileID: 613433886817584985, guid: 0daf298636d105d40a681a40bf61532e,
+    type: 3}
+  vfxMuzzleRed: {fileID: 5753095738681973001, guid: 9a6b00c6f6ecd46458a068b9dfe2f8c5,
     type: 3}
   mouseRaycastLayermask:
     serializedVersion: 2
@@ -3075,6 +3080,8 @@ MonoBehaviour:
   clientAnimationState: 0
   clientIsAiming: 0
   usingRifle: 0
+  pistolSoundFX: {fileID: 8300000, guid: 4310474905e266640852f43bd609a1a4, type: 3}
+  rifleSoundFX: {fileID: 8300000, guid: 06ada5590eba8d6489b36c6f3c54ff78, type: 3}
 --- !u!114 &184522815541022692
 MonoBehaviour:
   m_ObjectHideFlags: 0

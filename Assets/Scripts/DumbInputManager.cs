@@ -14,6 +14,7 @@ public class DumbInputManager : MonoBehaviour
 	public bool escape;
 	public bool usePistol;
 	public bool useRifle;
+	public bool reload;
 
 	[Header("Movement Settings")]
 	public bool analogMovement;
@@ -30,19 +31,22 @@ public class DumbInputManager : MonoBehaviour
 
     private void Update()
     {
-		move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         if (cursorLocked)
         {
+			move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
 			look = new Vector2(Input.GetAxis("Mouse X"), -1 * Input.GetAxis("Mouse Y"));
+			jump = Input.GetKeyDown(KeyCode.Space);
+			sprint = Input.GetKey(KeyCode.LeftShift);
+			aim = Input.GetMouseButton(1); // Right click
+			shoot = Input.GetMouseButton(0);
+			reload = Input.GetKeyDown(KeyCode.R);
 		}
         else
         {
+			move = Vector2.zero;
 			look = Vector2.zero;
 		}
-		jump = Input.GetKeyDown(KeyCode.Space);
-		sprint = Input.GetKey(KeyCode.LeftShift);
-		aim = Input.GetMouseButton(1); // Right click
-		shoot = Input.GetMouseButtonDown(0); // Left click
+		 // Left click
 		escape = Input.GetKeyDown(KeyCode.Escape);
 		usePistol = Input.GetKeyDown(KeyCode.Alpha1);
 		useRifle = Input.GetKeyDown(KeyCode.Alpha2);

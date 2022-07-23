@@ -141,10 +141,10 @@ namespace StarterAssets
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
 
-            if (IsClient && IsOwner)
-            {
-                _3pscontroller.SetVirtualCameraTargets(transform.Find("PlayerCameraRoot"));
-            }
+            //if (IsClient && IsOwner)
+            //{
+            //    _3pscontroller.SetVirtualCameraTargets(transform.Find("PlayerCameraRoot"));
+            //}
         }
 
         private void Update()

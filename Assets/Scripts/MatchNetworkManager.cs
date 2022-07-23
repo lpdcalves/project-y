@@ -1,3 +1,4 @@
+using Cinemachine;
 using Core.Singletons;
 using System.Collections.Generic;
 using System.Text;
@@ -18,6 +19,11 @@ namespace ProjectY
         public List<Transform> spawnPositions = new List<Transform>();
 
         public string matchPassword;
+
+        public CinemachineVirtualCamera aimVirtualCamera;
+        public CinemachineVirtualCamera followVirtualCamera;
+
+        public GameObject playerPrefab;
 
         private void Start()
         {
@@ -102,7 +108,34 @@ namespace ProjectY
         {
             playerCount.Value = NetworkManager.Singleton.ConnectedClientsIds.Count;
         }
-        
+
+        public void RespawnPlayer(ulong clientId)
+        {
+            if (IsServer)
+            {
+                var playerObject = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+                playerObject.Despawn();
+                Destroy(playerObject);
+                var idx = Random.Range(0, spawnPositions.Count);
+                var newPlayerObject = Instantiate(playerPrefab, spawnPositions[idx].position, spawnPositions[idx].rotation);
+                newPlayerObject.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+            }
+            else
+            {
+                RespawnPlayerServerRpc(clientId);
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void RespawnPlayerServerRpc(ulong clientId)
+        {
+            var playerObject = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+            playerObject.Despawn();
+            Destroy(playerObject);
+            var idx = Random.Range(0, spawnPositions.Count);
+            var newPlayerObject = Instantiate(playerPrefab, spawnPositions[idx].position, spawnPositions[idx].rotation);
+            newPlayerObject.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+        }
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
@@ -127,7 +160,7 @@ namespace ProjectY
             var idx = Random.Range(0, spawnPositions.Count);
             response.Position = spawnPositions[idx].position;
             // Rotation to spawn the player object (if null it uses the default of Quaternion.identity)
-            response.Rotation = Quaternion.identity;
+            response.Rotation = spawnPositions[idx].rotation;
 
             // If additional approval steps are needed, set this to true until the additional steps are complete
             // once it transitions from true to false the connection approval response will be processed.
